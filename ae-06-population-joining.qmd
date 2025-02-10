@@ -62,7 +62,7 @@ continents
 
     -   Which variable(s) will we use to join the `population` and `continents` data frames?
 
-    Add response here.
+    *entity & country*
 
     -   We want to create a new data frame that keeps all rows and columns from `population` and brings in the corresponding information from `continents`. Which join function should we use?
 
@@ -73,15 +73,19 @@ continents
 ```{r}
 #| label: join-population-continents
 
-# add code here
+population_continent <- left_join(population, continents, by = c("country" = "entity"))
+
 ```
 
 -   **Demo:** Take a look at the newly created `population_continent` data frame. There are some countries that were not in `continents`. First, identify which countries these are (they will have `NA` values for `continent`).
 
 ```{r}
 #| label: data-inspect
+missing_continents <- population_continent |>
+  filter(is.na(continent)) |>
+  select(country)
 
-# add code here
+missing_continents
 ```
 
 -   **Demo:** All of these countries are actually in the `continents` data frame, but under different names. So, let's clean that data first by updating the country names in the `population` data frame in a way they will match the `continents` data frame, and then joining them, using a `case_when()` statement in `mutate()`. At the end, check that all countries now have continent information.
@@ -89,19 +93,43 @@ continents
 ```{r}
 #| label: data-clean
 
-# add code here
+new_continents_new <- continents |>
+  mutate(entity = case_when(
+    entity == "Bahamas, The" ~ "Bahamas",
+    entity == "Cabo Verde" ~ "Cape Verde",
+    entity == "Congo" ~ "Republic of Congo",
+    entity == "Cote d'Ivoire" ~ "Ivory Coast",
+    entity == "Gambia, The" ~ "Gambia",
+    entity == "Slovak Republic" ~ "Slovakia",
+    TRUE ~ entity
+  ))
+
+population_continent <- left_join(population, new_continents_new, by = c("country" = "entity"))
+
+missing_continent <- population_continent |>
+  filter(is.na(continent)) |>
+  select(country)
+
+
 ```
 
 -   **Think out loud:** Which continent do you think has the highest population? Which do you think has the second highest? The lowest?
 
-Add your response here.
+*Asia* 
+*South America*
+*Oceania* 
 
 -   **Demo:** Create a new data frame called `population_summary` that contains a row for each continent and a column for the total population for that continent, in descending order of population. Note that the function for calculating totals in R is `sum()`.
 
 ```{r}
 #| label: population-continents-sum
 
-# add code here
+population_summary <- population_continent |>
+  group_by(continent) |>
+  summarize(total_population = sum(population, na.rm = TRUE)) |>
+  arrange(desc(total_population))
+
+population_summary
 ```
 
 -   **Your turn:** Make a bar plot with total population on the y-axis and continent on the x-axis, where the height of each bar represents the total population in that continent.
@@ -109,7 +137,17 @@ Add your response here.
 ```{r}
 #| label: population-summary-bar
 
-# add code here
+ggplot(population_summary, aes(x = continent, y = total_population, fill=continent)
+       ) +
+  geom_col() +
+  scale_fill_viridis_d() +
+  labs(x = "Continent", 
+       y = "Total Population", 
+       title = "Total Population by Continent") +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal() +
+  theme(legend.position='none')
+
 ```
 
 -   **Your turn:** Recreate the following plot, which is commonly referred to as a **lollipop plot**. Hint: Start with the points, then try adding the `segment`s, then add axis labels and `caption`, and finally, as a stretch goal, update the x scale (which will require a function we haven't introduced in lectures or labs yet!).
@@ -120,9 +158,22 @@ Add your response here.
 #| label: population-summary-lollipop
 #| fig-asp: 0.4
 
-# add code here
+ggplot(population_summary, aes(y = reorder(continent, total_population), x = total_population, colour=continent)
+       ) +
+  geom_segment(aes(yend = continent, x = 0, xend = total_population)) +
+  geom_point() +
+  scale_colour_viridis_d() +
+  labs(y = "Continent", 
+       x = "Total Population", 
+       title = "World Population", 
+       subtitle = "as of 2022",
+       caption="Data sources: The World Bank and Our World in Data") +
+  scale_x_continuous(labels = label_number(scale = 1e-6, suffix = " bil")) +
+  theme_minimal() +
+  theme(legend.position='none')
+
 ```
 
 -   **Think out loud:** What additional improvements would you like to make to this plot.
 
-Add your response here.
+*It would be nice to reorder the countries from highest to lowest on the graph itself, which I figured out how to do!*
